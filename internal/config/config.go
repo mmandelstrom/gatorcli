@@ -13,6 +13,38 @@ type Config struct {
 	CurrentUserName string `json:"current_user_name"`
 }
 
+type State struct {
+	Cfg *Config
+}
+
+type Command struct {
+	Name string
+	Args []string
+}
+
+type Commands struct {
+	CmdNames map[string]func(*State, Command) error
+}
+
+func (c *Commands) Run(s *State, cmd Command) error {
+	existingCmd, ok := c.CmdNames[cmd.Name]
+	if !ok {
+		return fmt.Errorf("command not found")
+	}
+	if err := existingCmd(s, cmd); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Commands) Register(name string, f func(*State, Command) error) {
+	if _, exists := c.CmdNames[name]; exists {
+		fmt.Printf("command: %s is already registered\n", name)
+		return
+	}
+	c.CmdNames[name] = f
+}
+
 func (cfg Config) SetUser(userName string) error {
 	cfg.CurrentUserName = userName
 	if err := write(cfg); err != nil {
@@ -61,5 +93,16 @@ func write(cfg Config) error {
 	if err := os.WriteFile(path, content, 0666); err != nil {
 		return fmt.Errorf("unable to write to %s\nerror: %s", path, err)
 	}
+	return nil
+}
+
+func HandlerLogin(s *State, cmd Command) error {
+	if len(cmd.Args) <= 0 {
+		return fmt.Errorf("the login handler expects a single argument, the username")
+	}
+	if err := s.Cfg.SetUser(cmd.Args[0]); err != nil {
+		return fmt.Errorf("unable to set user with state pointer")
+	}
+	fmt.Println("User has been updated!")
 	return nil
 }
