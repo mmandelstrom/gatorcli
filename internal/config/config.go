@@ -1,9 +1,14 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/mmandelstrom/gatorcli/internal/database"
 )
 
 const configFileName = ".gatorconfig.json"
@@ -15,6 +20,7 @@ type Config struct {
 
 type State struct {
 	Cfg *Config
+	Db  *database.Queries
 }
 
 type Command struct {
@@ -24,6 +30,14 @@ type Command struct {
 
 type Commands struct {
 	CmdNames map[string]func(*State, Command) error
+}
+
+func (c *Commands) Register(name string, f func(*State, Command) error) {
+	if _, exists := c.CmdNames[name]; exists {
+		fmt.Printf("command: %s is already registered\n", name)
+		return
+	}
+	c.CmdNames[name] = f
 }
 
 func (c *Commands) Run(s *State, cmd Command) error {
@@ -37,17 +51,9 @@ func (c *Commands) Run(s *State, cmd Command) error {
 	return nil
 }
 
-func (c *Commands) Register(name string, f func(*State, Command) error) {
-	if _, exists := c.CmdNames[name]; exists {
-		fmt.Printf("command: %s is already registered\n", name)
-		return
-	}
-	c.CmdNames[name] = f
-}
-
 func (cfg Config) SetUser(userName string) error {
 	cfg.CurrentUserName = userName
-	if err := write(cfg); err != nil {
+	if err := writeToConfigFile(cfg); err != nil {
 		return fmt.Errorf("unable to write to config, error: %s", err)
 	}
 	return nil
@@ -79,7 +85,7 @@ func getConfigFilePath() (string, error) {
 	return fullPath, nil
 }
 
-func write(cfg Config) error {
+func writeToConfigFile(cfg Config) error {
 	path, err := getConfigFilePath()
 	if err != nil {
 		return fmt.Errorf("unable to get path, error: %s", err)
@@ -100,9 +106,40 @@ func HandlerLogin(s *State, cmd Command) error {
 	if len(cmd.Args) <= 0 {
 		return fmt.Errorf("the login handler expects a single argument, the username")
 	}
+	_, err := s.Db.GetUser(context.Background(), cmd.Args[0])
+	if err != nil {
+		fmt.Printf("user does not exist\n")
+		os.Exit(1)
+	}
 	if err := s.Cfg.SetUser(cmd.Args[0]); err != nil {
 		return fmt.Errorf("unable to set user with state pointer")
 	}
 	fmt.Println("User has been updated!")
+	return nil
+}
+
+func RegisterHandler(s *State, cmd Command) error {
+	if len(os.Args) < 3 {
+		return fmt.Errorf("no name was passed as argument")
+	}
+	name := os.Args[2]
+	_, err := s.Db.GetUser(context.Background(), name)
+	if err == nil {
+		fmt.Printf("User: %s already exists\n", name)
+		os.Exit(1)
+	}
+	userParams := database.CreateUserParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      name}
+
+	s.Db.CreateUser(context.Background(), userParams)
+	err = s.Cfg.SetUser(name)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("user: %s was added\n", name)
+
 	return nil
 }

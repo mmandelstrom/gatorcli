@@ -1,0 +1,47 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace & build
+/bin/
+/build/
+/dist/
+
+# Vendor folder (if not checked in)
+vendor/
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Env files (sensitive credentials)
+.env
+.env.*
+
+# Database migration tools (optional)
+migrations/
+db/migrations/
+
+# Coverage reports
+coverage.out
+
+# Test result files
+*.testresult
+
+# Go tools
+.gopls/
