@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 
 	_ "github.com/lib/pq"
 	"github.com/mmandelstrom/gatorcli/internal/config"
@@ -31,13 +32,17 @@ func main() {
 	cmds := config.Commands{CmdNames: make(map[string]func(*config.State, config.Command) error)}
 	cmds.Register("login", config.HandlerLogin)
 	cmds.Register("register", config.RegisterHandler)
+	cmds.Register("reset", config.HandlerDelUsers)
+	cmds.Register("users", config.HandlerGetUsers)
 
 	if len(os.Args) < 2 {
 		fmt.Printf("too few arguments\n")
 		os.Exit(1)
 	}
+
+	name := strings.ToLower(os.Args[1])
 	cmd := config.Command{
-		Name: os.Args[1],
+		Name: name,
 		Args: os.Args[2:],
 	}
 

@@ -118,6 +118,31 @@ func HandlerLogin(s *State, cmd Command) error {
 	return nil
 }
 
+func HandlerDelUsers(s *State, cmd Command) error {
+	err := s.Db.DelUsers(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Println("Users database has been reset")
+	return nil
+}
+
+func HandlerGetUsers(s *State, cmd Command) error {
+	usrSlice, err := s.Db.GetUsers(context.Background())
+	if err != nil {
+		return err
+	}
+	for _, usr := range usrSlice {
+		if usr.Name == s.Cfg.CurrentUserName {
+			fmt.Printf("* %s (current)\n", usr.Name)
+		} else {
+			fmt.Printf("* %s\n", usr.Name)
+		}
+
+	}
+	return nil
+}
+
 func RegisterHandler(s *State, cmd Command) error {
 	if len(os.Args) < 3 {
 		return fmt.Errorf("no name was passed as argument")
